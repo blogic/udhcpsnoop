@@ -67,6 +67,7 @@ packet_handle_v4(uint8_t *buf, int len)
 	uint8_t *pos, *end;
 	int msg_type = 0;
 	unsigned char *client = msg->chaddr;
+	uint32_t magic;
 
 	if (len - (sizeof(*msg) - sizeof(msg->options)) < 4)
 		return;
@@ -78,7 +79,8 @@ packet_handle_v4(uint8_t *buf, int len)
 		return;
 	}
 
-	if (ntohl(*((uint32_t *)msg->options)) != DHCPV4_MAGIC)
+	memcpy(&magic, msg->options, 4);
+	if (ntohl(magic) != DHCPV4_MAGIC)
 		return;
 
 	end = (uint8_t *) buf + len;
