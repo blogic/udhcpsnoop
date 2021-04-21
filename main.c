@@ -44,14 +44,49 @@ static const struct sock_fprog sock_filter = {
 	.filter = dhcp_sock_filter_insns,
 };
 
+static struct ubus_auto_conn conn;
+static char hex_buf[2 * 1500 + 1];
 static struct uloop_fd socket_fd;
+static struct blob_buf b;
 static char *interface;
+static char *name;
+
+static struct ubus_object_type ubus_object_type =
+{
+};
+
+static void ubus_state_handler(struct ubus_context *ctx, struct ubus_object *obj)
+{
+}
+
+struct ubus_object ubus_object = {
+	.type = &ubus_object_type,
+	.subscribe_cb = ubus_state_handler,
+};
 
 static void
 dhcp_infrom(uint8_t *buf, int len, int ipver, char *type, int msg_type, unsigned char *client)
 {
 	fprintf(stderr, MAC_FMT" - DHCPv%d TYPE-%d(%s) - %d bytes of options on iface %s\n",
 		MAC_VAR(client), ipver, msg_type, type, len, interface);
+}
+
+static void
+dhcp_notify(uint8_t *buf, int len)
+{
+	int i;
+
+	if (len >= 1500)
+		len = 1500;
+
+	for (i = 0; i < len * 2; i += 2)
+		sprintf(&hex_buf[i], "%02x", *buf++);
+
+	hex_buf[len * 2] = '\0';
+
+	blob_buf_init(&b, 0);
+	blobmsg_add_string(&b, "packet", hex_buf);
+	ubus_notify(&conn.ctx, &ubus_object, "dhcpsnoop", b.head, -1);
 }
 
 static void
@@ -116,6 +151,7 @@ packet_handle_v4(uint8_t *buf, int len)
 	}
 	dhcp_infrom(&msg->options[4], len - (&msg->options[4] - buf), 4,
 		    name[msg_type], msg_type, client);
+	dhcp_notify(buf, len);
 }
 
 static void
@@ -152,6 +188,7 @@ packet_handle_v6(uint8_t *buf, int len)
 	}
 	dhcp_infrom((uint8_t *)&msg[1], len - sizeof(*msg), 6,
 		    name[msg->msg_type], msg->msg_type, client);
+	dhcp_notify(buf, len);
 }
 
 static void
@@ -212,6 +249,12 @@ socket_open(char *ifname)
 	return sock;
 }
 
+static void
+ubus_connect_handler(struct ubus_context *ctx)
+{
+	ubus_add_object(ctx, &ubus_object);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -224,6 +267,11 @@ main(int argc, char **argv)
 	interface = argv[1];
 	ifname = argv[2];
 
+	if (asprintf(&name, "dhcpsnoop.%s", ifname) < 0)
+		return -1;
+
+	ubus_object_type.name = ubus_object.name = name;
+
 	ulog_open(ULOG_STDIO | ULOG_SYSLOG, LOG_DAEMON, "udhcpsnoop");
 
 	sock = socket_open(ifname);
@@ -231,6 +279,9 @@ main(int argc, char **argv)
 		exit(-1);
 
 	uloop_init();
+
+	conn.cb = ubus_connect_handler;
+        ubus_auto_connect(&conn);
 
 	socket_fd.cb = socket_fd_cb;
 	socket_fd.fd = sock;

@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +15,7 @@
 #include <libubox/utils.h>
 #include <libubox/uloop.h>
 #include <libubox/ulog.h>
+#include <libubus.h>
 
 enum dhcpv4_msg {
 	DHCPV4_MSG_DISCOVER = 1,
