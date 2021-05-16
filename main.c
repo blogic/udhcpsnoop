@@ -72,7 +72,7 @@ dhcp_infrom(uint8_t *buf, int len, int ipver, char *type, int msg_type, unsigned
 }
 
 static void
-dhcp_notify(uint8_t *buf, int len)
+dhcp_notify(char *event, uint8_t *buf, int len)
 {
 	int i;
 
@@ -86,17 +86,17 @@ dhcp_notify(uint8_t *buf, int len)
 
 	blob_buf_init(&b, 0);
 	blobmsg_add_string(&b, "packet", hex_buf);
-	ubus_notify(&conn.ctx, &ubus_object, "dhcpsnoop", b.head, -1);
+	ubus_notify(&conn.ctx, &ubus_object, event, b.head, -1);
 }
 
 static void
 packet_handle_v4(uint8_t *buf, int len)
 {
 	char *name[] = {
-		[DHCPV4_MSG_ACK] = "ACK",
-		[DHCPV4_MSG_DISCOVER] = "DISCOVER",
-		[DHCPV4_MSG_OFFER] = "OFFER",
-		[DHCPV4_MSG_REQUEST] = "REQUEST",
+		[DHCPV4_MSG_ACK] = "ack",
+		[DHCPV4_MSG_DISCOVER] = "discover",
+		[DHCPV4_MSG_OFFER] = "offer",
+		[DHCPV4_MSG_REQUEST] = "request",
 	};
 	struct dhcpv4_message *msg = (struct dhcpv4_message *)buf;
 	uint8_t *pos, *end;
@@ -151,16 +151,16 @@ packet_handle_v4(uint8_t *buf, int len)
 	}
 	dhcp_infrom(&msg->options[4], len - (&msg->options[4] - buf), 4,
 		    name[msg_type], msg_type, client);
-	dhcp_notify(buf, len);
+	dhcp_notify(name[msg_type], buf, len);
 }
 
 static void
 packet_handle_v6(uint8_t *buf, int len)
 {
 	char *name[] = {
-		[DHCPV6_MSG_SOLICIT] = "SOLICIT",
-		[DHCPV6_MSG_REPLY] = "REPLY",
-		[DHCPV6_MSG_RENEW] = "RENEW",
+		[DHCPV6_MSG_SOLICIT] = "solicit",
+		[DHCPV6_MSG_REPLY] = "reply",
+		[DHCPV6_MSG_RENEW] = "renew",
 	};
 	struct dhcpv6_message *msg = (struct dhcpv6_message *)buf;
 	unsigned char *client = msg->ethh.h_dest;
@@ -188,7 +188,7 @@ packet_handle_v6(uint8_t *buf, int len)
 	}
 	dhcp_infrom((uint8_t *)&msg[1], len - sizeof(*msg), 6,
 		    name[msg->msg_type], msg->msg_type, client);
-	dhcp_notify(buf, len);
+	dhcp_notify(name[msg->msg_type], buf, len);
 }
 
 static void
