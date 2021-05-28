@@ -12,10 +12,13 @@
 #include <linux/udp.h>
 #include <netinet/ip6.h>
 
+#include <libubox/avl-cmp.h>
 #include <libubox/utils.h>
 #include <libubox/uloop.h>
 #include <libubox/ulog.h>
 #include <libubus.h>
+#include <uci.h>
+#include <uci_blob.h>
 
 enum dhcpv4_msg {
 	DHCPV4_MSG_DISCOVER = 1,
