@@ -61,7 +61,7 @@ static char hex_buf[2 * 1500 + 1];
 static struct blob_buf b;
 
 static struct ubus_object_type ubus_object_type = {
-	.name = "dhcpsnooping"
+	.name = "dhcpsnoop"
 };
 
 static void ubus_state_handler(struct ubus_context *ctx, struct ubus_object *obj)
@@ -69,7 +69,7 @@ static void ubus_state_handler(struct ubus_context *ctx, struct ubus_object *obj
 }
 
 struct ubus_object ubus_object = {
-	.name = "dhcpsnooping",
+	.name = "dhcpsnoop",
 	.type = &ubus_object_type,
 	.subscribe_cb = ubus_state_handler,
 };
@@ -307,6 +307,7 @@ ubus_netifd_status_cb(struct ubus_request *req,
 	snoop = avl_find_element(&dhcpsnoops, (char *)req->priv, snoop, avl);
 	if (!snoop)
 		return;
+	snoop->ifname = strdup(blobmsg_get_string(tb[STATUS_ATTR_L3_DEVICE]));
 	snoop_start(snoop);
 }
 
@@ -383,6 +384,8 @@ config_load_network(char *network)
 {
 	struct dhcpsnoop *snoop = malloc(sizeof(*snoop));
 
+	ULOG_INFO("loading network %s\n", network);
+
 	memset(snoop, 0, sizeof(*snoop));
 	snoop->network = strdup(network);
 	snoop->avl.key = snoop->network;
@@ -409,6 +412,8 @@ config_load(void)
 	struct blob_attr *tb[__SNOOPING_ATTR_MAX] = { 0 };
 	struct uci_context *uci = uci_alloc_context();
 	struct uci_package *package = NULL;
+
+	ULOG_INFO("loading config\n");
 
 	if (!uci_load(uci, "dhcpsnoop", &package)) {
 		struct uci_element *e;
