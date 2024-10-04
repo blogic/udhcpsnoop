@@ -1,24 +1,9 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
+#ifndef __DHCPSNOOP_MSG_H
+#define __DHCPSNOOP_MSG_H
 
-#define _GNU_SOURCE
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <netinet/ip.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <linux/if_ether.h>
-#include <linux/filter.h>
-#include <linux/udp.h>
-#include <netinet/ip6.h>
-
-#include <libubox/avl-cmp.h>
-#include <libubox/utils.h>
-#include <libubox/uloop.h>
-#include <libubox/ulog.h>
-#include <libubus.h>
-#include <uci.h>
-#include <uci_blob.h>
+#include <netinet/in.h>
+#include <stdint.h>
 
 enum dhcpv4_msg {
 	DHCPV4_MSG_DISCOVER = 1,
@@ -59,24 +44,22 @@ enum dhcpv4_opt {
 };
 
 struct dhcpv4_message {
-	struct ethhdr ethh;
-	struct ip iph;
-	struct udphdr udph;
 	uint8_t op;
-        uint8_t htype;
-        uint8_t hlen;
-        uint8_t hops;
-        uint32_t xid;
-        uint16_t secs;
-        uint16_t flags;
-        struct in_addr ciaddr;
-        struct in_addr yiaddr;
-        struct in_addr siaddr;
-        struct in_addr giaddr;
-        uint8_t chaddr[16];
-        char sname[64];
-        char file[128];
-        uint8_t options[312];
+	uint8_t htype;
+	uint8_t hlen;
+	uint8_t hops;
+	uint32_t xid;
+	uint16_t secs;
+	uint16_t flags;
+	struct in_addr ciaddr;
+	struct in_addr yiaddr;
+	struct in_addr siaddr;
+	struct in_addr giaddr;
+	uint8_t chaddr[16];
+	char sname[64];
+	char file[128];
+	uint32_t magic;
+	uint8_t options[];
 } __attribute__((packed));
 
 #define DHCPV4_MAGIC 0x63825363
@@ -97,15 +80,9 @@ enum dhcpv6_opt {
 	DHCPV6_MSG_RELAY_REPL = 13,
 };
 struct dhcpv6_message {
-	struct ethhdr ethh;
-	struct ip6_hdr ip6h;
-	struct udphdr udph;
 	uint8_t msg_type;
 	uint8_t transaction_id[3];
+	uint8_t options[];
 } __attribute__((packed));
 
-#define MAC_FMT "%02x:%02x:%02x:%02x:%02x:%02x"
-#define MAC_VAR(x) x[0], x[1], x[2], x[3], x[4], x[5]
-
-#define IP_FMT  "%d.%d.%d.%d"
-#define IP_VAR(x) x[0], x[1], x[2], x[3]
+#endif
